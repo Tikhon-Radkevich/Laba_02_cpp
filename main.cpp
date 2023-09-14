@@ -5,9 +5,12 @@
 #include <vector>
 
 
-int* numbers;
-int size;
+using std::cout;
 
+
+double* numbers;
+int size;
+double average;
 
 struct MinMaxThreadArgs {
     std::vector<int> min_positions;
@@ -15,11 +18,11 @@ struct MinMaxThreadArgs {
 };
 
 DWORD WINAPI MinMaxThread(LPVOID lpParam) {
-    std::cout << "min_max thread is started." << std::endl;
+    // cout << "min_max thread is started.\n";
 
     MinMaxThreadArgs* args = reinterpret_cast<MinMaxThreadArgs*>(lpParam);
 
-    // Find the minimum and maximum elements
+    // Find the minimum and maximum elements && Save their positions
     int min = numbers[0];
     args->min_positions.push_back(0);
     int max = numbers[0];
@@ -29,30 +32,33 @@ DWORD WINAPI MinMaxThread(LPVOID lpParam) {
         if (numbers[i] < min) {
             min = numbers[i];
             args->min_positions.clear();
+        }
+        if (numbers[i] == min) {
             args->min_positions.push_back(i);
         }
         Sleep(7);
+
         if (numbers[i] > max) {
             max = numbers[i];
             args->max_positions.clear();
+        }
+        if (numbers[i] == max) {
             args->max_positions.push_back(i);
         }
         Sleep(7);
-}
+    }
 
-    
+    cout << "Minimum value: " << min << std::endl;
+    cout << "Maximum value: " << max << std::endl;
 
-    std::cout << "Minimum value: " << min << std::endl;
-    std::cout << "Maximum value: " << max << std::endl;
-
-    std::cout << "min_max thread is finished." << std::endl;
+    // cout << "min_max thread is finished.\n";
     return 0;
 }
 
 DWORD WINAPI AverageThread(LPVOID lpParam) {
-    std::cout << "average thread is started." << std::endl;
+    // cout << "average thread is started.\n";
 
-    double average = 0;
+    average = 0;
 
     // Calculate the sum of elements and the average value
     for (int i = 0; i < size; ++i) {
@@ -61,24 +67,22 @@ DWORD WINAPI AverageThread(LPVOID lpParam) {
     }
     average /= size;
 
-    std::cout << "Average value: " << average << std::endl;
+    cout << "Average value: " << average << std::endl;
 
-    std::cout << "average thread is finished." << std::endl;
+    // cout << "Average thread is finished.\n";
     return 0;
 }
 
 int main() {
-    std::cout << "Enter the size of the array: ";
+    cout << "\nEnter the size of the array: ";
     std::cin >> size;
 
-    numbers = new int[size];
+    numbers = new double[size];
 
-    std::cout << "Enter " << size << " integers:" << std::endl;
+    cout << "Enter " << size << " integers:\n>>> ";
     for (int i = 0; i < size; ++i) {
         std::cin >> numbers[i];
     }
-
-
 
     // Create min_max and average threads
     MinMaxThreadArgs min_max_args;
@@ -86,7 +90,7 @@ int main() {
     HANDLE hAverageThread = CreateThread(NULL, 0, AverageThread, NULL, 0, NULL);
 
     if (hMinMaxThread == NULL || hAverageThread == NULL) {
-        std::cerr << "Error creating threads." << std::endl;
+        cout << "Error creating threads.\n";
         return GetLastError();
     }
 
@@ -97,35 +101,20 @@ int main() {
     CloseHandle(hMinMaxThread);
     CloseHandle(hAverageThread);
 
-    for(int i : min_max_args.min_positions){
-        std::cout << i << " ";
+    // Replace min and max elements with the average
+    for (int pos : min_max_args.max_positions) {
+        numbers[pos] = average;
+    }
+    for (int pos : min_max_args.min_positions) {
+        numbers[pos] = average;
     }
 
-    // // Find the minimum and maximum elements
-    // int min, max;
-    // min = *std::min_element(numbers, numbers + size);
-    // max = *std::max_element(numbers, numbers + size);
+    cout << "Result: ";
+    for (int i = 0; i < size; i++) {
+        cout << numbers[i] << ";  ";
+    }
 
-    // // Calculate the average value
-    // double average = 0;
-    // for (int i = 0; i < size; ++i) {
-    //     average += numbers[i];
-    // }
-    // average /= size;
-
-    // // Replace min and max elements with the average
-    // for (int i = 0; i < size; ++i) {
-    //     if (numbers[i] == min || numbers[i] == max) {
-    //         numbers[i] = static_cast<int>(average);
-    //     }
-    // }
-
-    // // Output the modified array
-    // std::cout << "Modified array: ";
-    // for (int i = 0; i < size; ++i) {
-    //     std::cout << numbers[i] << " ";
-    // }
-    std::cout << std::endl;
+    cout << "\n\n";
 
     delete[] numbers;
 
