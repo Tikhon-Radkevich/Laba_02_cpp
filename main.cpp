@@ -10,46 +10,36 @@ using std::cout;
 
 double* numbers;
 int size;
-double average;
 
-struct MinMaxThreadArgs {
-    std::vector<int> min_positions;
-    std::vector<int> max_positions;
+struct ThreadArgs {             
+    int max;
+    int min;
+    double average = 0;
 };
 
 DWORD WINAPI MinMaxThread(LPVOID lpParam) {
     // cout << "min_max thread is started.\n";
 
-    MinMaxThreadArgs* args = reinterpret_cast<MinMaxThreadArgs*>(lpParam);
+    ThreadArgs* args = reinterpret_cast<ThreadArgs*>(lpParam);
 
     // Find the minimum and maximum elements && Save their positions
-    int min = numbers[0];
-    args->min_positions.push_back(0);
-    int max = numbers[0];
-    args->max_positions.push_back(0);
+    args->min = numbers[0];
+    args->max = numbers[0];
 
     for (int i = 1; i < size; ++i) {
-        if (numbers[i] < min) {
-            min = numbers[i];
-            args->min_positions.clear();
-        }
-        if (numbers[i] == min) {
-            args->min_positions.push_back(i);
+        if (numbers[i] < args->min) {
+            args->min = numbers[i];
         }
         Sleep(7);
 
-        if (numbers[i] > max) {
-            max = numbers[i];
-            args->max_positions.clear();
-        }
-        if (numbers[i] == max) {
-            args->max_positions.push_back(i);
+        if (numbers[i] > args->max) {
+            args->max = numbers[i];
         }
         Sleep(7);
     }
 
-    cout << "Minimum value: " << min << std::endl;
-    cout << "Maximum value: " << max << std::endl;
+    cout << "Minimum value: " << args->min << std::endl;
+    cout << "Maximum value: " << args->max << std::endl;
 
     // cout << "min_max thread is finished.\n";
     return 0;
@@ -58,16 +48,16 @@ DWORD WINAPI MinMaxThread(LPVOID lpParam) {
 DWORD WINAPI AverageThread(LPVOID lpParam) {
     // cout << "average thread is started.\n";
 
-    average = 0;
+    ThreadArgs* args = reinterpret_cast<ThreadArgs*>(lpParam);
 
     // Calculate the sum of elements and the average value
     for (int i = 0; i < size; ++i) {
-        average += numbers[i];
+        args->average += numbers[i];
         Sleep(12);
     }
-    average /= size;
+    args->average /= size;
 
-    cout << "Average value: " << average << std::endl;
+    cout << "Average value: " << args->average << std::endl;
 
     // cout << "Average thread is finished.\n";
     return 0;
@@ -85,9 +75,9 @@ int main() {
     }
 
     // Create min_max and average threads
-    MinMaxThreadArgs min_max_args;
-    HANDLE hMinMaxThread = CreateThread(NULL, 0, MinMaxThread, &min_max_args, 0, NULL);
-    HANDLE hAverageThread = CreateThread(NULL, 0, AverageThread, NULL, 0, NULL);
+    ThreadArgs thread_args;
+    HANDLE hMinMaxThread = CreateThread(NULL, 0, MinMaxThread, &thread_args, 0, NULL);
+    HANDLE hAverageThread = CreateThread(NULL, 0, AverageThread, &thread_args, 0, NULL);
 
     if (hMinMaxThread == NULL || hAverageThread == NULL) {
         cout << "Error creating threads.\n";
@@ -102,11 +92,10 @@ int main() {
     CloseHandle(hAverageThread);
 
     // Replace min and max elements with the average
-    for (int pos : min_max_args.max_positions) {
-        numbers[pos] = average;
-    }
-    for (int pos : min_max_args.min_positions) {
-        numbers[pos] = average;
+    for (int i=0; i < size; i++){
+        if ((numbers[i] == thread_args.max) || (numbers[i] == thread_args.min)){
+            numbers[i] = thread_args.average;
+        }
     }
 
     cout << "Result: ";
